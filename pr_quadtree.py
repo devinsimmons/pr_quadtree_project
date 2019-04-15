@@ -296,10 +296,10 @@ class quadtree_node:
             else:
                 if self.coordinates:
                     plt.scatter([i[0] for i in self.coordinates], [i[1] for i in self.coordinates],
-                                color = '#008837', zorder = 5)
+                                zorder = 5)
                 plt.plot([self.x_left, self.x_left, self.x_right, self.x_right, self.x_left],
                          [self.y_left, self.y_right, self.y_right, self.y_left, self.y_left], 
-                         color = '#7b3294')
+                         color = 'black')
                 
 class quadtree_root:
     
@@ -338,6 +338,7 @@ class quadtree_root:
     def make_plot(self):
         plt.style.use('seaborn-darkgrid')
         self.root.make_plot()
+        plt.axis('scaled')
         plt.show()
 
 class input_data:
@@ -355,11 +356,9 @@ class input_data:
    
 tree = quadtree_root(69, (0, 0), 2)
 
-for i in range(0, 69):
+for i in range(0, 10):
     tree.insert(str(i), (random.randrange(69), random.randrange(69)))
 
 tree.preorder_traversal()
 
-
-tree.preorder_traversal()
 tree.make_plot()
