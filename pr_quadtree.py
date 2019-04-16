@@ -46,7 +46,6 @@ class quadtree_node:
     def point(self, value, coordinates, prev: None, nex: None):
         self.value = value
         self.coordinates = coordinates
-        self.prev = prev
         self.nex = nex
         
     '''
@@ -354,7 +353,7 @@ class quadtree_root:
         plt.style.use('seaborn-darkgrid')
         self.root.make_plot()
         plt.axis('scaled')
-        plt.show()
+        
 
 class input_data:
     def __init__(self, filepath):
@@ -379,7 +378,12 @@ tree.insert('e', (3, 6))
 tree.insert('f', (0.2, 4))
 
 tree.make_plot()
+plt.savefig('before_delete.png', dpi = 350)
+plt.show()
+
 
 tree.delete('a', (1, 4))
 tree.delete('f', (0.2, 4))
 tree.make_plot()
+plt.savefig('after_delete.png', dpi = 350)
+plt.show()
