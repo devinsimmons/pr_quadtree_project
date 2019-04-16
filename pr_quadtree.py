@@ -40,7 +40,15 @@ class quadtree_node:
         #the tuple coordinates representing the location(s) of the value(s) in this cell
         self.coordinates = coordinates
         
-    
+    '''
+    trying to make a linked list for points in a node
+    '''
+    def point(self, value, coordinates, prev: None, nex: None):
+        self.value = value
+        self.coordinates = coordinates
+        self.prev = prev
+        self.nex = nex
+        
     '''
     function to insert points into the pr quadtree. data should indicate the data that belongs in the
     point, and coordinates indicate the point location
@@ -167,24 +175,31 @@ class quadtree_node:
     children do not exceed the capacity paremeter
     '''
     def merge(self):
+        values = []
+        coords = []
         for i in self.children:
             #only takes values from full leaf nodes
             if i.value:
-                values = i.value
-                coords = i.coordinates
-                if not self.value:
-                    self.value = []
-                    self.coordinates = []
-                
-                for x in values:
-                    self.value.append(x)
-                for x in coords:
-                    self.coordinates.append(x)
-        #remove pointers to children
-        self.ne_child = None
-        self.nw_child = None
-        self.sw_child = None
-        self.se_child = None
+                for val in range(0, len(i.value)):
+                    values.append(i.value[val])
+                    coords.append(i.coordinates[val])
+        
+        if len(values) <= self.capacity:
+            if not self.value:
+                self.value = []
+                self.coordinates = []
+            
+            for x in values:
+                self.value.append(x)
+            for x in coords:
+                self.coordinates.append(x)
+            #remove pointers to children
+            self.ne_child = None
+            self.nw_child = None
+            self.sw_child = None
+            self.se_child = None
+            if self.parent:
+                self.parent.merge()
 
         
     '''
@@ -354,11 +369,17 @@ class input_data:
    
 
    
-tree = quadtree_root(69, (0, 0), 2)
+tree = quadtree_root(10, (0, 0), 1)
 
-for i in range(0, 10):
-    tree.insert(str(i), (random.randrange(69), random.randrange(69)))
+tree.insert('a', (1, 4))
+tree.insert('b', (2, 3))
+tree.insert('c', (6, 1))
+tree.insert('d', (2, 8))
+tree.insert('e', (3, 6))
+tree.insert('f', (0.2, 4))
 
-tree.preorder_traversal()
+tree.make_plot()
 
+tree.delete('a', (1, 4))
+tree.delete('f', (0.2, 4))
 tree.make_plot()
