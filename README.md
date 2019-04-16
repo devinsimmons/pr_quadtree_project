@@ -14,3 +14,5 @@ This quadtree has a capacity of 1 and a width of 10. Below is a visualization of
 
 Then, after the green and red points are deleted:
 ![Alt text](/after_delete.png)
+It should be noted that the colors are not stored in the points. They are assigned when the visualization is created based
+on the order of insertion
