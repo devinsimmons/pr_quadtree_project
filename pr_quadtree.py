@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import random
 
 class quadtree_node:
     
@@ -9,7 +8,7 @@ class quadtree_node:
     label is used to represent the location of the node. the root is equal to 0
     '''
     def __init__(self, width: int, bottom_left: tuple, capacity: int, 
-                 value:list = None, coordinates: list = None, label: int = 0):
+                 coordinates: list = None, label: int = 0):
         
         self.label = label
         self.capacity = capacity
@@ -35,32 +34,23 @@ class quadtree_node:
         self.y_right = bottom_left[1] + width
         
 
-        #there can only be values  here if the cell is a full leaf node
-        self.value = value
         #the tuple coordinates representing the location(s) of the value(s) in this cell
         self.coordinates = coordinates
         
-    '''
-    trying to make a linked list for points in a node
-    '''
-    def point(self, value, coordinates, prev: None, nex: None):
-        self.value = value
-        self.coordinates = coordinates
-        self.nex = nex
-        
+    
     '''
     function to insert points into the pr quadtree. data should indicate the data that belongs in the
     point, and coordinates indicate the point location
     '''    
-    def insert(self, data, insert_coordinates):
+    def insert_point(self, data, insert_coordinates):
         
         #determine if the point lies within the cell's boundaries
         if self.point_in_cell(insert_coordinates):
             
-            if self.value:
+            if self.coordinates:
                 #if the node has reached its capacity, it needs to be split up to insert new data
                 #this does not handle the case where the node is internal
-                if len(self.value) == self.capacity:
+                if len(self.coordinates) == self.capacity:
                     self.nw_child = quadtree_node(self.width/2, (self.x_left, self.y_left+self.width/2), self.capacity, label = 4*self.label + 2)
                     self.ne_child = quadtree_node(self.width/2, (self.x_left + self.width/2, self.y_left+ self.width/2), self.capacity, label = 4*self.label + 1)
                     self.sw_child = quadtree_node(self.width/2, (self.x_left, self.y_left), self.capacity, label = 4*self.label + 3)
@@ -68,7 +58,6 @@ class quadtree_node:
                     self.children = [self.ne_child, self.nw_child, self.sw_child, self.se_child]
                     
                     #storing data from the cell before clearing it out
-                    original_value = self.value
                     original_coordinates = self.coordinates
                         
                     
@@ -79,61 +68,55 @@ class quadtree_node:
                         child.root_width = self.root_width
                         #reinsert all points that were in the node that will now be an 
                         #internal node
-                        for i in range(0, self.capacity):
+                        for i in original_coordinates:
                             
                             #inserts all the residual values, if they are in the new leaf
-                            if child.point_in_cell(original_coordinates[i]):
-                                child.insert(original_value[i], original_coordinates[i])
+                            if child.point_in_cell(i):
+                                child.insert_point(original_coordinates[i], i)
                         
                         #clears node out, makes it an internal node
-                        if child.value:
-                            self.value = None
+                        if child.coordinates:
                             self.coordinates = None
                     
                     #determine which child the new data will be inserted to
                     for child in self.children:
                         #determines if new insert point can be inserted into the new leaf
                         if child.point_in_cell(insert_coordinates):
-                            return child.insert(data, insert_coordinates)                                                
+                            return child.insert_point(data, insert_coordinates)                                                
     
                 #handles internal nodes, which have self.value set to None
                 elif self.nw_child:
                     
                     for child in self.children:
                         if child.point_in_cell(insert_coordinates):
-                            return child.insert(data, insert_coordinates)
+                            return child.insert_point(data, insert_coordinates)
     
                 #handles case where the cell is an empy leaf node. This is the ultimate destination of all inserted
                 #points. additionally, points that are reinserted when cells break up go through these lines
                 else:
                     
                     #value and location are added as attributes to the cell
-                    if self.value:
-                        self.value.append(data)
-                        self.coordinates.append((insert_coordinates[0], insert_coordinates[1]))
+                    if self.coordinates:
+                        self.coordinates[insert_coordinates] = data
                     else:
-                        self.value = [data]
-                        self.coordinates = [(insert_coordinates[0], insert_coordinates[1])]
+                        self.coordinates = {insert_coordinates: data}
                     #print('{} inserted in cell defined by origin {}, width {}'.format(data, self.bottom_left, self.width))
                     return True
             #handles internal nodes, which have self.value set to None
             elif self.nw_child:
                 for child in self.children:
                     if child.point_in_cell(insert_coordinates):
-                        return child.insert(data, insert_coordinates)
+                        return child.insert_point(data, insert_coordinates)
 
             #handles case where the cell is an empy leaf node. This is the ultimate destination of all inserted
             #points. additionally, points that are reinserted when cells break up go through these lines
-            else:
-                
+            else:    
                 #value and location are added as attributes to the cell
-                if self.value:
-                    self.value.append(data)
-                    self.coordinates.append((insert_coordinates[0], insert_coordinates[1]))
+                if self.coordinates:
+                    self.coordinates[insert_coordinates] = data
                 else:
-                    self.value = [data]
-                    self.coordinates = [(insert_coordinates[0], insert_coordinates[1])]
-                
+                    self.coordinates = {insert_coordinates: data}
+                #print('{} inserted in cell defined by origin {}, width {}'.format(data, self.bottom_left, self.width))
                 return True
         else:
             return False
@@ -142,16 +125,20 @@ class quadtree_node:
     function used to delete data from the tree. requires both the value and
     its location as parameters
     '''
-    def delete(self, data, del_coord):
+    def delete(self, del_coord):
         #check if point is in node
         if self.point_in_cell(del_coord):
             
             #case for full leaf nodes
             if self.coordinates:
                 if del_coord in self.coordinates:
-                    self.coordinates = [i for i in self.coordinates if i != del_coord]
-                    self.value = [i for i in self.value if i != data]
-                    self.parent.merge()
+                    #remove coordinate
+                    new_coords = [i for i in self.coordinates if i != del_coord]
+                    new_data = [self.coordinates[i] for i in new_coords]
+                    #recreate dictionary without deleted coordinate
+                    self.coordinates = dict(zip(new_coords, new_data))
+                    if self.parent:
+                        self.parent.merge()
                     return True
                 else:
                     return False
@@ -160,7 +147,7 @@ class quadtree_node:
             else:
                 if self.ne_child:
                     for child in self.children:
-                        if child.delete(data, del_coord):
+                        if child.delete(del_coord):
                             return True             
                 
                 #case for empty leaf nodes 
@@ -174,31 +161,36 @@ class quadtree_node:
     children do not exceed the capacity paremeter
     '''
     def merge(self):
-        values = []
-        coords = []
-        for i in self.children:
-            #only takes values from full leaf nodes
-            if i.value:
-                for val in range(0, len(i.value)):
-                    values.append(i.value[val])
-                    coords.append(i.coordinates[val])
+        #variable used to check if a merge is required
+        num_pts = 0
+        if self.coordinates:
+            num_pts += len(self.coordinates)
         
-        if len(values) <= self.capacity:
-            if not self.value:
-                self.value = []
-                self.coordinates = []
-            
-            for x in values:
-                self.value.append(x)
-            for x in coords:
-                self.coordinates.append(x)
-            #remove pointers to children
-            self.ne_child = None
-            self.nw_child = None
-            self.sw_child = None
-            self.se_child = None
-            if self.parent:
-                self.parent.merge()
+        if self.ne_child:
+            for i in self.children:
+                #determine how many points are in the parent node's children
+                if i.coordinates:
+                    num_pts += len(i.coordinates)
+                elif i.ne_child:
+                    for child in i.children:
+                        num_pts += child.merge()
+
+            if num_pts <= self.capacity:
+                if not self.coordinates:
+                    self.coordinates = {}
+                for i in self.children:
+                    if i.coordinates:
+                        for x in i.coordinates:
+                            self.coordinates[x] = i.coordinates[x]
+                #remove pointers to children
+                self.ne_child = None
+                self.nw_child = None
+                self.sw_child = None
+                self.se_child = None
+                self.children = None
+                if self.parent:
+                    self.parent.merge()
+        return num_pts
 
         
     '''
@@ -257,9 +249,9 @@ class quadtree_node:
             
             #different print statements for leaf nodes
             else:
-                if self.value:
+                if self.coordinates:
                     node_type = 'Full leaf'
-                    print(self.label, node_type, len(self.value), self.value)
+                    print(self.label, node_type, len(self.coordinates), self.coordinates)
                 else:
                     node_type = 'Empty leaf'
                     print(self.label, node_type)
@@ -276,11 +268,10 @@ class quadtree_node:
                 
                 #if leaf node, check if the point is present
                 if self.coordinates:
-                    for i in range(0, len(self.coordinates)):
-                        if query_coord == self.coordinates[i]:
-                            print('EQUAL TO ' + str(self.value[i]))
-                            return True
-                    if query_coord not in self.coordinates:
+                    if query_coord in self.coordinates:
+                        print('EQUAL TO ' + str(self.coordinates[query_coord]))
+                        return True
+                    else:
                         print('NOT FOUND')
                         return False
         
@@ -310,10 +301,10 @@ class quadtree_node:
             else:
                 if self.coordinates:
                     plt.scatter([i[0] for i in self.coordinates], [i[1] for i in self.coordinates],
-                                zorder = 5)
+                                color = '#008837', zorder = 5)
                 plt.plot([self.x_left, self.x_left, self.x_right, self.x_right, self.x_left],
                          [self.y_left, self.y_right, self.y_right, self.y_left, self.y_left], 
-                         color = 'black')
+                         color = '#7b3294')
                 
 class quadtree_root:
     
@@ -327,7 +318,7 @@ class quadtree_root:
     #coordinates represent location of the tuple
     def insert(self, data, insert_coordinates):
         print('INSERT {} {}'.format(data, insert_coordinates))
-        if self.root.insert(data, insert_coordinates):
+        if self.root.insert_point(data, insert_coordinates):
             print('{} inserted into the PR-Quadtree'.format(data))
         else:
             print(('{} could not be inserted in the PR-Quadtree').format(data))
@@ -342,10 +333,9 @@ class quadtree_root:
         self.root.point_query(query_coord)
         print('END POINT QUERY \n')
     
-    def delete(self, data, del_coord):
-        if self.root.delete(data, del_coord):
-            #self.root.merge()
-            print('{} deleted from tree at {}'.format(data, del_coord))
+    def delete(self, del_coord):
+        if self.root.delete(del_coord):
+            print('{} deleted from tree'.format(del_coord))
         else:
             print('Could not delete data at {} because it was not found'.format(del_coord))
     
@@ -353,7 +343,7 @@ class quadtree_root:
         plt.style.use('seaborn-darkgrid')
         self.root.make_plot()
         plt.axis('scaled')
-        
+        plt.show()
 
 class input_data:
     def __init__(self, filepath):
@@ -365,25 +355,4 @@ class input_data:
         points_y = [float(i.split(' ')[1][0:-1]) for i in points]
         self.points = list(zip(points_x, points_y))
 
-   
-
-   
-tree = quadtree_root(10, (0, 0), 1)
-
-tree.insert('a', (1, 4))
-tree.insert('b', (2, 3))
-tree.insert('c', (6, 1))
-tree.insert('d', (2, 8))
-tree.insert('e', (3, 6))
-tree.insert('f', (0.2, 4))
-
-tree.make_plot()
-plt.savefig('before_delete.png', dpi = 350)
-plt.show()
-
-
-tree.delete('a', (1, 4))
-tree.delete('f', (0.2, 4))
-tree.make_plot()
-plt.savefig('after_delete.png', dpi = 350)
-plt.show()
+  
